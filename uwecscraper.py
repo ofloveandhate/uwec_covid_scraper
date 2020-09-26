@@ -41,7 +41,17 @@ def read_daily_websites(path = default_data_location):
 
 
 #%% Save and load
-    
+
+def download_img_and_save(url, path):
+    import requests
+    a = url.find("UW-EauClaireCOVID-19DataTrackerDashboard")
+    b = len(url)
+    fn = url[a:b].replace('/','_')
+    fn = '{}/{}'.format(path,fn)
+    with open(fn, "wb") as f:
+        f.write(requests.get(url).content)
+            
+            
 def is_new_data(soup):
     
     m = hashlib.sha256()
@@ -82,7 +92,13 @@ def gen_filename_from_date(path,date,autoincrement = True):
     fname = "{}/{}_{}.html".format(path,fname,highest+1)
     return fname
 
-
+def save_all_tableau_images(soup, path):
+    imgs = soup.find_all('img')
+    for im in imgs:
+        s = im['src']
+        if s.find('tableau')>=0:
+            download_img_and_save(s,path)
+    
 def save_html(soup, date, path=default_data_location):
     """
     required arg: soup -- a result from the .content attribute of getting a page with BS.
@@ -90,15 +106,22 @@ def save_html(soup, date, path=default_data_location):
     optional arg: date as a datetime object.  
     if not supplied, will use the current time.
     """
-
+    import os
     if type(date)!=datetime:
         raise TypeError("date must be a `datetime` object")
             
     
     fname = gen_filename_from_date(path,date)
     
+    
+    p = fname[:-5]+'imgs'
+    print(p)
+    os.mkdir(p)
+    save_all_tableau_images(soup, p)
+    
     with open(fname,'w', encoding='utf-8') as fout:
         fout.write(str(soup))
+        
     print("saved soup to file `{}`".format(fname))
     return fname
 
@@ -109,7 +132,7 @@ def gather_current(url=URL):
 
     
 def gather_and_save(url=URL,even_if_old = False):
-    gather_current(url=url)
+    soup = gather_current(url=url)
     
     try:
         date = get_date(soup)
