@@ -18,7 +18,7 @@ import hashlib
 #%%
 
 URL = 'https://www.uwec.edu/coronavirus-updates/dashboard/'
-default_data_location = "/Users/amethyst/Dropbox/work/covid/uwec_scraping/data/daily_website_saves/"
+default_data_location = "/Users/amethyst/Dropbox/work/covid/data/daily_website_saves/"
 
 #%%
 
