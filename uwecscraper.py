@@ -109,8 +109,8 @@ def gather_current(url=URL):
 
     
 def gather_and_save(url=URL,even_if_old = False):
-    page = requests.get(url)
-    soup = BeautifulSoup(page.content, 'html.parser')
+    gather_current(url=url)
+    
     try:
         date = get_date(soup)
     except RuntimeError as e:
