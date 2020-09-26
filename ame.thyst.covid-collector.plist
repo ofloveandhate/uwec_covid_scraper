@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>ame.thyst.covid-collector</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/amethyst/opt/anaconda3/bin/python3</string>
+        <string>/Users/amethyst/Dropbox/work/covid/uwec_scraping/autosave_covid.py</string>
+    </array>
+    <key>StartInterval</key>
+    <integer>900</integer>
+
+    <key>StandardOutPath</key>
+    <string>/Users/amethyst/covid-collector.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/amethyst/covid-collector-stderr.log</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+</dict>
+</plist>
