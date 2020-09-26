@@ -102,11 +102,22 @@ def save_html(soup, date, path=default_data_location):
     print("saved soup to file `{}`".format(fname))
     return fname
 
+def gather_current(url=URL):
+    page = requests.get(url)
+    soup = BeautifulSoup(page.content, 'html.parser')
+    return soup
 
+    
 def gather_and_save(url=URL,even_if_old = False):
     page = requests.get(url)
     soup = BeautifulSoup(page.content, 'html.parser')
-    date = get_date(soup)
+    try:
+        date = get_date(soup)
+    except RuntimeError as e:
+        now = datetime.now()
+        date = datetime(now.year,now.month,now.day,1,2,34)
+        print('unable to read date from source :(   using datestring {}'.format(date))
+        
     if even_if_old or is_new_data(soup):
         save_html(soup, date)
     else:
@@ -139,12 +150,14 @@ def get_date_til_sept14_2(soup):
     raise RuntimeError('unable to find MM/DD/YY format')
     
     
-import unicodedata
+
 def abbr_to_month(abbr):
     abbr_map = {'Sept.': 9,'Oct.': 10,'Nov.':11, 'Dec.':12}
     return abbr_map[abbr]
 
-def UWEC_date_to_datetime_after_sept14(datestring):
+
+# up to but not including 9/25
+def UWEC_date_to_datetime_til_sept25(datestring):
 
     hh,mm = list(map(int,datestring.split()[0].split(':')))
     ampm = datestring.split()[1].split('.')
@@ -155,7 +168,11 @@ def UWEC_date_to_datetime_after_sept14(datestring):
     
     return datetime(2000+yy,MM,dd,hh+int(ampm[0]=='p')*12,mm)
 
-def get_date_after_sept14(soup):
+
+
+# up to but not including 9/25
+def get_date_til_sept25(soup):
+    import unicodedata
     h4 = soup.find_all('h4')
     for h in h4:
         t = str(h.find(text=True))
@@ -164,7 +181,7 @@ def get_date_after_sept14(soup):
         s = re.search('([0-9]+:[0-9]+ [a,p].m. [A-z]+. [0-9]+)',t)
         if s!=None:
             q = s.span()
-            d = UWEC_date_to_datetime_after_sept14(t[q[0]:q[1]])
+            d = UWEC_date_to_datetime_til_sept25(t[q[0]:q[1]])
             return d
         
     raise RuntimeError('unable to find Mo. DD format')
@@ -174,8 +191,11 @@ def get_date_after_sept14(soup):
 def get_date(soup):
     try:
         return get_date_til_sept14_2(soup)
-    except RuntimeError:
-        return get_date_after_sept14(soup)
+    except RuntimeError as e1:
+        try:
+            return get_date_til_sept25(soup)
+        except RuntimeError:
+            raise e1
     
     
 
