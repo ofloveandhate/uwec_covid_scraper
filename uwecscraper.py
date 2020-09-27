@@ -93,11 +93,13 @@ def gen_filename_from_date(path,date,autoincrement = True):
     return fname
 
 def save_all_tableau_images(soup, path):
-    imgs = soup.find_all('img')
-    for im in imgs:
-        s = im['src']
-        if s.find('tableau')>=0:
-            download_img_and_save(s,path)
+    params = soup.find_all('param')
+    for p in params:
+        n = p['name']
+        if n.find('static_image')==0:
+            if p['value'].find('tableau'):
+                download_img_and_save(p['value'],path)
+                
     
 def save_html(soup, date, path=default_data_location):
     """
