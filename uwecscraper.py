@@ -85,14 +85,19 @@ def is_new_based_on_imgs(soup):
     
     there's an improvement, in that the new images are already downloaded, so if you go on to save the page and its images, the re-download is a waste.  oh well.
     """
-    tempdir = join(default_data_location,"tempimgs")
+
     
-    if not os.path.exists(tempdir):
-        os.mkdir(tempdir)
-        
-    save_all_tableau_images(soup, tempdir)
     
-    img_folders = get_all_image_folders(default_data_location)
+    prev_hashes = get_prev_img_hashes()
+    temp_hashes = get_temp_img_hashes(soup)
+
+    if len(temp_hashes.difference(prev_hashes))>0:
+        return True
+    
+    return False
+
+def get_prev_img_hashes(path = default_data_location):
+    img_folders = get_all_image_folders(path)
     
     hashes = set()
     
@@ -105,8 +110,16 @@ def is_new_based_on_imgs(soup):
                 q = fin.read()
                 
                 hashes.add(get_hash(q))
+                
+    return hashes
     
+def get_temp_img_hashes(soup):
+    tempdir = join(default_data_location,"tempimgs")
+    if not os.path.exists(tempdir):
+        os.mkdir(tempdir)
+    save_all_tableau_images(soup, tempdir)
     temp_hashes = set()
+    
     onlypngs = [f for f in listdir(tempdir) if isfile(join(tempdir, f)) and f.find('.png')>=0]
     for img in onlypngs:
         with open(join(tempdir,img),'rb') as fin:
@@ -115,12 +128,9 @@ def is_new_based_on_imgs(soup):
     import shutil
     shutil.rmtree(tempdir)
     
-    if len(temp_hashes.difference(hashes))!= len(temp_hashes):
-        return False
+    return temp_hashes
     
-    return True
-
-
+    
 
 def get_all_image_folders(path):
     
