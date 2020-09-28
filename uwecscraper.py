@@ -97,6 +97,10 @@ def is_new_based_on_imgs(soup):
     return False
 
 def get_prev_img_hashes(path = default_data_location):
+    """
+    computes the hash of all saved images in all image folders in `path`
+    returns a `set` of the hashes.
+    """
     img_folders = get_all_image_folders(path)
     
     hashes = set()
@@ -113,7 +117,14 @@ def get_prev_img_hashes(path = default_data_location):
                 
     return hashes
     
-def get_temp_img_hashes(soup):
+def get_temp_img_hashes(soup, delete_when_done = True):
+    """
+    computes the hash of all new images.  returns a `set` of them.
+    
+    works by making a tempdir, and downloading the images to it.
+    computes the hashes
+    deletes the tempdir
+    """
     tempdir = join(default_data_location,"tempimgs")
     if not os.path.exists(tempdir):
         os.mkdir(tempdir)
@@ -125,8 +136,10 @@ def get_temp_img_hashes(soup):
         with open(join(tempdir,img),'rb') as fin:
             q = fin.read()
             temp_hashes.add(get_hash(q))
-    import shutil
-    shutil.rmtree(tempdir)
+            
+    if delete_when_done:
+        import shutil
+        shutil.rmtree(tempdir)
     
     return temp_hashes
     
