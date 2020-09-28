@@ -26,6 +26,11 @@ default_data_location = "/Users/amethyst/Dropbox/work/covid/data/daily_website_s
 #%%
 
 def read_daily_websites(path = default_data_location):
+    """
+    reads soup (but not images)
+    into memory
+    for all saved soups.
+    """
     
     from os import listdir
     from os.path import isfile, join
@@ -46,6 +51,11 @@ def read_daily_websites(path = default_data_location):
 #%% Save and load
 
 def download_img_and_save(url, path):
+    """
+    downloads image to disk, canonicalizing the pathname if suitably named.
+    
+    probably fragile if name pattern changes.
+    """
     import requests
     a = url.find("UW-EauClaireCOVID-19DataTrackerDashboard")
     b = len(url)
@@ -56,10 +66,25 @@ def download_img_and_save(url, path):
             
             
 def is_new_data(soup):
+    """
+    a wrapper function, checking whether data is new based on all saved criteria
+    """
     
     return is_new_based_on_html(soup) or is_new_based_on_imgs(soup)
     
 def is_new_based_on_imgs(soup):
+    """
+    checks whether the soup is new, based on whether we already have a copy of
+    the tableau images.
+    
+    this was made necessary on sept 25, 2020.
+    
+    downloads all images from soup, hashes them.  hashes old images.  
+    sees if there's a new image we didn't already have.
+    deletes temp images.
+    
+    there's an improvement, in that the new images are already downloaded, so if you go on to save the page and its images, the re-download is a waste.  oh well.
+    """
     tempdir = join(default_data_location,"tempimgs")
     
     if not os.path.exists(tempdir):
@@ -98,9 +123,15 @@ def is_new_based_on_imgs(soup):
 
 
 def get_all_image_folders(path):
+    
     return [f for f in listdir(path) if isdir(join(path, f)) and f.find("imgs")>=0]
 
 def is_new_based_on_html(soup):
+    """
+    determines whether the soup is new, based on hashing with stored soups.  
+    
+    this should probably also be used in conjunction with other saved data, incase any piece of it changes between crawls.
+    """
     m = hashlib.sha256()
     m.update(str(soup).encode('utf-8'))
     curr_hash = m.digest()
@@ -114,6 +145,11 @@ def is_new_based_on_html(soup):
     return True
 
 def get_hash(thing):
+    """
+    a helper object for producing sha256 hashes from anything.
+    
+    if it can't tolerate the type of object you pass, will raise an exception.  it's probably the wrong type of exception to be raising.
+    """
     n = hashlib.sha256()
     
     if isinstance(thing,str):
@@ -126,6 +162,9 @@ def get_hash(thing):
     return(n.digest())
     
 def gen_filename_from_date(path,date,autoincrement = True):
+    """
+    makes a datetime object into a valid filename, using the iso format
+    """
     
     fname = date.isoformat().replace(':','.')
     
@@ -144,7 +183,11 @@ def gen_filename_from_date(path,date,autoincrement = True):
     fname = "{}/{}_{}.html".format(path,fname,highest+1)
     return fname
 
+
 def save_all_tableau_images(soup, path):
+    """
+    saves all images from soup, that have the word "tableau" in the url, to the specified path.
+    """
     params = soup.find_all('param')
     for p in params:
         n = p['name']
@@ -179,12 +222,24 @@ def save_html(soup, date, path=default_data_location):
     return fname
 
 def gather_current(url=URL):
+    """
+    gets the soup for the page, as it is currently on yon internet
+    """
     page = requests.get(url)
     soup = BeautifulSoup(page.content, 'html.parser')
     return soup
 
     
 def gather_and_save(url=URL,even_if_old = False):
+    """
+    gets the current soup, as on the internet. 
+    checks if we already have it.  
+    - if do, no save.  
+    - if not, autosave using date, defaulting to now in case can't read date from page (sept 25 mod to source made this necessary.)
+    
+    there is an option to save even if we already have it.  this is guaranteed to not overwrite old data, because every data has an incremented counter in its name.  huzzah.
+    """
+    
     soup = gather_current(url=url)
     
     try:
