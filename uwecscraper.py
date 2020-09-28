@@ -14,6 +14,9 @@ import requests
 from datetime import datetime
 from bs4 import BeautifulSoup
 import hashlib
+import os
+from os import listdir
+from os.path import isfile, join, isdir
 
 #%%
 
@@ -54,30 +57,79 @@ def download_img_and_save(url, path):
             
 def is_new_data(soup):
     
+    return is_new_based_on_html(soup) or is_new_based_on_imgs(soup)
+    
+def is_new_based_on_imgs(soup):
+    tempdir = join(default_data_location,"tempimgs")
+    
+    if not os.path.exists(tempdir):
+        os.mkdir(tempdir)
+        
+    save_all_tableau_images(soup, tempdir)
+    
+    img_folders = get_all_image_folders(default_data_location)
+    
+    hashes = set()
+    
+    
+    for f in img_folders:
+        arst = join(default_data_location,f)
+        onlypngs = [join(arst,img) for img in listdir(arst) if isfile(join(arst, img)) and img.find('.png')>=0]
+        for p in onlypngs:
+            with open(p,'rb') as fin:
+                q = fin.read()
+                
+                hashes.add(get_hash(q))
+    
+    temp_hashes = set()
+    onlypngs = [f for f in listdir(tempdir) if isfile(join(tempdir, f)) and f.find('.png')>=0]
+    for img in onlypngs:
+        with open(join(tempdir,img),'rb') as fin:
+            q = fin.read()
+            temp_hashes.add(get_hash(q))
+    import shutil
+    shutil.rmtree(tempdir)
+    
+    if len(temp_hashes.difference(hashes))!= len(temp_hashes):
+        return False
+    
+    return True
+
+
+
+def get_all_image_folders(path):
+    return [f for f in listdir(path) if isdir(join(path, f)) and f.find("imgs")>=0]
+
+def is_new_based_on_html(soup):
     m = hashlib.sha256()
     m.update(str(soup).encode('utf-8'))
     curr_hash = m.digest()
     
     data = read_daily_websites()
     for k,v in data.items():
-
-        n = hashlib.sha256()
-        n.update(v.encode('utf-8'))
-        then_hash = n.digest()
-        
+        then_hash = get_hash(str(v))
         if curr_hash == then_hash:
             return False
         
     return True
 
-
+def get_hash(thing):
+    n = hashlib.sha256()
+    
+    if isinstance(thing,str):
+        n.update(thing.encode('utf-8' ))
+    elif isinstance(thing, bytes):
+        n.update(thing)
+    else:
+        raise RuntimeError("unknown type: {}".format(str(type(thing))))
+            
+    return(n.digest())
+    
 def gen_filename_from_date(path,date,autoincrement = True):
     
     fname = date.isoformat().replace(':','.')
     
     if autoincrement:
-        from os import listdir
-        from os.path import isfile, join
 
         onlyfiles = [f for f in listdir(path) if isfile(join(path, f)) and f!='.DS_Store']
         
@@ -117,7 +169,6 @@ def save_html(soup, date, path=default_data_location):
     
     
     p = fname[:-5]+'imgs'
-    print(p)
     os.mkdir(p)
     save_all_tableau_images(soup, p)
     
@@ -140,7 +191,7 @@ def gather_and_save(url=URL,even_if_old = False):
         date = get_date(soup)
     except RuntimeError as e:
         now = datetime.now()
-        date = datetime(now.year,now.month,now.day,1,2,34)
+        date = datetime(now.year,now.month,now.day,now.hour,now.minute,now.second)
         print('unable to read date from source :(   using datestring {}'.format(date))
         
     if even_if_old or is_new_data(soup):
