@@ -211,6 +211,13 @@ def save_all_tableau_images(soup, path):
     """
     saves all images from soup, that have the word "tableau" in the url, to the specified path.
     """
+    
+    imgs = soup.find_all('img')
+    for im in imgs:
+        s = im['src']
+        if s.find('tableau')>=0:
+            download_img_and_save(s,path)
+    
     params = soup.find_all('param')
     for p in params:
         n = p['name']
