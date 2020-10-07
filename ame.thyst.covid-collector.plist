@@ -10,7 +10,7 @@
         <string>/Users/amethyst/Dropbox/work/covid/uwec_covid_scraper/autosave_covid.py</string>
     </array>
     <key>StartInterval</key>
-    <integer>900</integer>
+    <integer>300</integer>
 
     <key>StandardOutPath</key>
     <string>/Users/amethyst/covid-collector.log</string>
