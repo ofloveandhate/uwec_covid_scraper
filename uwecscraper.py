@@ -195,16 +195,13 @@ def gen_filename_from_date(path,date,autoincrement = True):
 
         onlyfiles = [f for f in listdir(path) if isfile(join(path, f)) and f!='.DS_Store']
         
-        highest = -1
-        for f in onlyfiles:
-            temp_f = f.strip('.html')
-            if fname == temp_f[0:19]:
-                if int(temp_f.split('_')[1]) > highest:
-                    highest = int(temp_f[20:])
-                
+        found_numbers = [int(f.strip('.html').split('_')[1]) for f in onlyfiles if fname == f[0:len(fname)] ]
+            
+        highest = -1         
+        if len(found_numbers)>0:
+            highest = max(found_numbers)
     
-    fname = "{}/{}_{}.html".format(path,fname,highest+1)
-    return fname
+    return "{}/{}_{}.html".format(path,fname,highest+1)
 
 
 def save_all_tableau_images(soup, path):
