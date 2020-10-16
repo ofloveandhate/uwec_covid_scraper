@@ -110,22 +110,24 @@ def which_img_hashes_dont_match(h1, h2):
     return which_match
 
 def img_hash_matches_previous(df):
-    matches = [[]]
+    matches = [[]] # preallocate the first one, since this is a consecutive-item operation.
     for i in range(1,df.shape[0]):   
         matches.append(which_img_hashes_dont_match(df.iloc[i-1]['img_hashes'],df.iloc[i]['img_hashes']))
         
     return matches
 
 def find_duplicate_data():
-    I = read_daily_images_and_source()
-    I['source_is_new'] = source_hash_matches_previous(I)
-    I['image_is_new'] = img_hash_matches_previous(I)
-    I['data_was_new'] = I.apply(lambda row: row['source_is_new'] or len(row['image_is_new'])>0, axis=1)
+    df = read_daily_images_and_source()
+    df = add_newness(df)
 
-    return (I[~I['data_was_new']])
+    return (df[~df['data_was_new']])
 
 
-
+def add_newness(df):
+    df['source_is_new'] = source_hash_matches_previous(df)
+    df['image_is_new'] = img_hash_matches_previous(df)
+    df['data_was_new'] = df.apply(lambda row: row['source_is_new'] or len(row['image_is_new'])>0, axis=1)
+    return df
 
 
 #%% Save and load
