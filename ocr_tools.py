@@ -9,13 +9,15 @@ daily_numbers_box = (10, 127, 795, 245)
 # image_path is the location of today's numbers image.
 # This is likely
 #   "<uwec_covid_scraper_root>/downloads/2020-10-03T13.24.17_0imgs/UW-EauClaireCOVID-19DataTrackerDashboardHSTiles_HealthServicesTiles_1.png"
-def daily_numbers(image_path, report = False):
+def daily_numbers(im, report = False, from_file = False):
     # Load the saved image, 
     #   crop to the numbers, 
     #   convert to greyscale,
     #   extract to string,
     # Then trim the string 
-    im = Image.open(image_path)
+    if from_file:
+        im = Image.open(im)
+        
     numbers = im.crop(daily_numbers_box)
     num_gs = gs(numbers)
     text = pt.image_to_string(num_gs)
