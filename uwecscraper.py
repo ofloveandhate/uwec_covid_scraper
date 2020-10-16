@@ -107,7 +107,7 @@ def get_prev_img_hashes(path = default_data_location):
     
     
     for f in img_folders:
-        arst = join(default_data_location,f)
+        arst = join(path,f)
         onlypngs = [join(arst,img) for img in listdir(arst) if isfile(join(arst, img)) and img.find('.png')>=0]
         for p in onlypngs:
             with open(p,'rb') as fin:
