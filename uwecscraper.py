@@ -25,7 +25,7 @@ default_data_location = "/Users/amethyst/Dropbox/work/covid/data/daily_website_s
 
 #%%
 
-def read_daily_websites(path = default_data_location):
+def read_daily_source(path = default_data_location):
     """
     reads soup (but not images)
     into memory
@@ -36,17 +36,18 @@ def read_daily_websites(path = default_data_location):
     from os.path import isfile, join
     onlyfiles = [f for f in listdir(path) if isfile(join(path, f)) and f!='.DS_Store']
     
-    data = {}
+    source = []
     for f in onlyfiles:
         with open(join(path, f),'r',encoding='utf-8') as fin:
             try:
-                data[f] = BeautifulSoup(fin.read(), 'html.parser')
+                source.append(BeautifulSoup(fin.read(), 'html.parser'))
             except Exception:
                 print('failed to read {}'.format(f))
                 raise
-        
+    
+    data = pd.DataFrame({'name':onlyfiles, 'source':source})
+    data['hash'] = data['source'].apply(lambda x: get_hash(x))
     return data
-
 
 #%% Save and load
 
@@ -155,16 +156,12 @@ def is_new_based_on_html(soup):
     
     this should probably also be used in conjunction with other saved data, incase any piece of it changes between crawls.
     """
-    m = hashlib.sha256()
-    m.update(str(soup).encode('utf-8'))
-    curr_hash = m.digest()
+    curr_hash = get_hash(soup)
     
-    data = read_daily_websites()
-    for k,v in data.items():
-        then_hash = get_hash(str(v))
-        if curr_hash == then_hash:
-            return False
-        
+    source = read_daily_source()
+    if curr_hash in set(source['hash']):
+        return False
+ 
     return True
 
 def get_hash(thing):
@@ -179,6 +176,8 @@ def get_hash(thing):
         n.update(thing.encode('utf-8' ))
     elif isinstance(thing, bytes):
         n.update(thing)
+    elif isinstance(thing,BeautifulSoup):
+        n.update(get_hash(str(thing)))
     else:
         raise RuntimeError("unknown type: {}".format(str(type(thing))))
             
