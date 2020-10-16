@@ -17,6 +17,7 @@ import hashlib
 import os
 from os import listdir
 from os.path import isfile, join, isdir
+import numpy as np
 
 #%%
 
@@ -24,6 +25,8 @@ URL = 'https://www.uwec.edu/coronavirus-updates/dashboard/'
 default_data_location = "/Users/amethyst/Dropbox/work/covid/data/daily_website_saves/"
 
 #%%
+
+
 
 def read_daily_source(path = default_data_location):
     """
@@ -46,8 +49,84 @@ def read_daily_source(path = default_data_location):
                 raise
     
     data = pd.DataFrame({'name':onlyfiles, 'source':source})
-    data['hash'] = data['source'].apply(lambda x: get_hash(x))
+    data['name'] = data['name'].apply(lambda x: x[:-5])
+    data['source_hash'] = data['source'].apply(lambda x: get_hash(x))
     return data
+
+
+def read_daily_images(path = default_data_location):
+    img_folders = get_all_image_folders(path)
+    
+    names = []
+    images = []
+    hashes = []
+    for f in img_folders:
+        arst = join(path,f)
+        onlypngs = [join(arst,img) for img in listdir(arst) if isfile(join(arst, img)) and img.find('.png')>=0]
+        
+        this_f = {}
+        this_hashes = {}
+        for p in onlypngs:
+            fname = p.split('/')[-1]
+            with open(p,'rb') as fin:
+                q = fin.read()
+                this_f[fname] = q
+                this_hashes[fname] = get_hash(q)
+                
+        names.append(f[:-4])
+        images.append(this_f)
+        hashes.append(this_hashes)
+        
+    imgs = pd.DataFrame({'name':names, 'images':images, 'img_hashes': hashes})
+    
+    return imgs
+
+def read_daily_images_and_source(path = default_data_location):
+    source = read_daily_source(path)
+    imgs = read_daily_images(path)
+    return source.set_index('name').join(imgs.set_index('name')).sort_index().reset_index()
+
+#%% functions for working with hashes, to determine if there are any duplicate rows.
+    
+
+def source_hash_matches_previous(df):
+    return df.source_hash.ne(df.source_hash.shift())
+
+def which_img_hashes_dont_match(h1, h2):
+
+    img_names1 = set(h1.keys()) if isinstance(h1, dict) else set()
+    img_names2 = set(h2.keys()) if isinstance(h2, dict) else set()
+    img_names = img_names1.union(img_names2)
+    
+    hash_matches = {}
+    which_match = []
+    for n in img_names:
+        if not n in img_names1 and n in img_names2:
+            hash_matches[n] = False
+        else:
+            hash_matches[n] = h1[n]==h2[n]
+            if not hash_matches[n]:
+                which_match.append(n)  
+    return which_match
+
+def img_hash_matches_previous(df):
+    matches = [[]]
+    for i in range(1,df.shape[0]):   
+        matches.append(which_img_hashes_dont_match(df.iloc[i-1]['img_hashes'],df.iloc[i]['img_hashes']))
+        
+    return matches
+
+def find_duplicate_data():
+    I = read_daily_images_and_source()
+    I['source_is_new'] = source_hash_matches_previous(I)
+    I['image_is_new'] = img_hash_matches_previous(I)
+    I['data_was_new'] = I.apply(lambda row: row['source_is_new'] or len(row['image_is_new'])>0, axis=1)
+
+    return (I[~I['data_was_new']])
+
+
+
+
 
 #%% Save and load
 
@@ -159,7 +238,7 @@ def is_new_based_on_html(soup):
     curr_hash = get_hash(soup)
     
     source = read_daily_source()
-    if curr_hash in set(source['hash']):
+    if curr_hash in set(source['source_hash']):
         return False
  
     return True
