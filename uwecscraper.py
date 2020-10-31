@@ -223,7 +223,7 @@ def is_new_based_on_imgs(soup):
     return False
 
 
-def is_new_based_on_html(soup, path=default_data_location):
+def is_new_based_on_html(soup, path=default_data_location, delete_when_done = True):
     """
     determines whether the soup is new, based on hashing with stored soups.  
     
@@ -235,8 +235,10 @@ def is_new_based_on_html(soup, path=default_data_location):
         
     with open("temp_source.tmp",'r', encoding='utf-8') as fin:
         tmp_soup = BeautifulSoup(fin.read(), 'html.parser')
+    
+    if delete_when_done:
+        os.remove("temp_source.tmp")
         
-    os.remove("temp_source.tmp")
     curr_hash = get_hash(tmp_soup)
     
     
