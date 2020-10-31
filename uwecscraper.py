@@ -19,6 +19,10 @@ from os import listdir
 from os.path import isfile, join, isdir
 import numpy as np
 
+import ocr_tools
+
+os.environ['PATH'] += os.pathsep + '/usr/local/bin'
+
 #%%
 
 URL = 'https://www.uwec.edu/coronavirus-updates/dashboard/'
@@ -53,6 +57,20 @@ def read_daily_source(path = default_data_location):
     data['source_hash'] = data['source'].apply(lambda x: get_hash(x))
     return data
 
+def read_last_soup(path=default_data_location):
+    """
+    Reads in the latest html source as soup.
+    """
+    from os import listdir
+    from os.path import isfile, join
+    htmlfiles = [f for f in listdir(path) if isfile(join(path, f)) and f!='.DS_Store' and f.find(".html")>=0]
+    htmlfiles.sort()
+    latest_name = htmlfiles[-1]
+    print(latest_name)
+    with open(join(path, latest_name),'r',encoding='utf-8') as fin:
+        soup = BeautifulSoup(fin.read(), 'html.parser')
+    return soup
+
 
 def read_daily_images(path = default_data_location):
     img_folders = get_all_image_folders(path)
@@ -85,6 +103,30 @@ def read_daily_images_and_source(path = default_data_location):
     source = read_daily_source(path)
     imgs = read_daily_images(path)
     return source.set_index('name').join(imgs.set_index('name')).sort_index().reset_index()
+
+
+
+#%% functions for dealing with image--> text data
+
+def add_daily_from_images(df):
+    get_im = lambda row: row['images']['UW-EauClaireCOVID-19DataTrackerDashboardHSTiles_HealthServicesTiles_1.png'] if isinstance(row['images'], dict) else np.nan
+    as_im = lambda row: Image.open(io.BytesIO(get_im(row))) if isinstance(row['images'], dict) else np.nan
+
+    def as_daily_numbers(row):
+        try:
+            d = ocr_tools.daily_numbers(row['as_image'])
+            return d
+        except AttributeError as e:
+            return np.nan
+        except ValueError as e:
+            return [np.nan, np.nan, np.nan]
+
+    df['as_image'] = df.apply(as_im, axis=1)
+    df['as_daily_from_image'] = df.apply(as_daily_numbers, axis=1)
+    
+    return df    
+
+
 
 #%% functions for working with hashes, to determine if there are any duplicate rows.
     
@@ -146,7 +188,9 @@ def download_img_and_save(url, path):
     with open(fn, "wb") as f:
         f.write(requests.get(url).content)
             
-            
+           
+#%%
+        
 def is_new_data(soup):
     """
     a wrapper function, checking whether data is new based on all saved criteria
@@ -178,24 +222,48 @@ def is_new_based_on_imgs(soup):
     
     return False
 
+
+def is_new_based_on_html(soup, path=default_data_location):
+    """
+    determines whether the soup is new, based on hashing with stored soups.  
+    
+    this should probably also be used in conjunction with other saved data, incase any piece of it changes between crawls.
+    """
+    
+    with open("temp_source.tmp",'w', encoding='utf-8') as fout:
+        fout.write(str(soup))
+        
+    with open("temp_source.tmp",'r', encoding='utf-8') as fin:
+        tmp_soup = BeautifulSoup(fin.read(), 'html.parser')
+    curr_hash = get_hash(tmp_soup)
+        
+    
+    
+    prev_source = read_last_soup(path)
+    if curr_hash==get_hash(prev_source):
+        print("same, based on source")
+        return False
+    else:
+        print("new based on source")
+        return True
+    
+#%%
 def get_prev_img_hashes(path = default_data_location):
     """
     computes the hash of all saved images in all image folders in `path`
     returns a `set` of the hashes.
     """
-    img_folders = get_all_image_folders(path)
     
+    f = get_last_image_folder(path)
     hashes = set()
     
-    
-    for f in img_folders:
-        arst = join(path,f)
-        onlypngs = [join(arst,img) for img in listdir(arst) if isfile(join(arst, img)) and img.find('.png')>=0]
-        for p in onlypngs:
-            with open(p,'rb') as fin:
-                q = fin.read()
-                
-                hashes.add(get_hash(q))
+    arst = join(path,f)
+    onlypngs = [join(arst,img) for img in listdir(arst) if isfile(join(arst, img)) and img.find('.png')>=0]
+    for p in onlypngs:
+        with open(p,'rb') as fin:
+            q = fin.read()
+            
+            hashes.add(get_hash(q))
                 
     return hashes
     
@@ -228,22 +296,16 @@ def get_temp_img_hashes(soup, delete_when_done = True):
     
 
 def get_all_image_folders(path):
-    
-    return [f for f in listdir(path) if isdir(join(path, f)) and f.find("imgs")>=0]
+    return [f for f in listdir(path) if isdir(join(path, f)) and f.find("imgs")>=0 and f.find("temp")<0]
 
-def is_new_based_on_html(soup):
-    """
-    determines whether the soup is new, based on hashing with stored soups.  
-    
-    this should probably also be used in conjunction with other saved data, incase any piece of it changes between crawls.
-    """
-    curr_hash = get_hash(soup)
-    
-    source = read_daily_source()
-    if curr_hash in set(source['source_hash']):
-        return False
- 
-    return True
+
+def get_last_image_folder(path):
+    img_folders = get_all_image_folders(path)
+    img_folders.sort()
+    f = img_folders[-1]
+    return f
+
+
 
 def get_hash(thing):
     """
@@ -283,7 +345,7 @@ def gen_filename_from_date(path,date,autoincrement = True):
     
     return "{}/{}_{}.html".format(path,fname,highest+1)
 
-
+#%%
 def save_all_tableau_images(soup, path):
     """
     saves all images from soup, that have the word "tableau" in the url, to the specified path.
