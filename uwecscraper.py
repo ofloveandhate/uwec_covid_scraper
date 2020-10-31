@@ -218,9 +218,10 @@ def is_new_based_on_imgs(soup):
     temp_hashes = get_temp_img_hashes(soup)
 
     if len(temp_hashes.difference(prev_hashes))>0:
+        print("new, based on images")
         return True
-    
-    return False
+    else:
+        return False
 
 
 def is_new_based_on_html(soup, path=default_data_location, delete_when_done = True):
@@ -245,7 +246,6 @@ def is_new_based_on_html(soup, path=default_data_location, delete_when_done = Tr
     
     prev_source = read_last_soup(path)
     if curr_hash==get_hash(prev_source):
-        print("same, based on source")
         return False
     else:
         print("new based on source")
