@@ -28,7 +28,9 @@ def daily_numbers(im, report = False, from_file = False):
     cstext = text[:text.index("%")]
     cstext = cstext.replace(",", "") # remove commas from numbers (e.g. 1,234 ~~> 1234)
     vals = cstext.split(" ")
-
+    vals[0] = int(vals[0])
+    vals[1] = int(vals[1])
+    vals[2] = float(vals[2])
     if report:
         print("Daily numbers:")
         print("Positive tests: {}\nTotal tests: {}\n Percent positive: {}\n".format(vals[0], vals[1], vals[2]))
