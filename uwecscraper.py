@@ -230,15 +230,15 @@ def is_new_based_on_html(soup, path=default_data_location, delete_when_done = Tr
     
     this should probably also be used in conjunction with other saved data, incase any piece of it changes between crawls.
     """
-    
-    with open("temp_source.tmp",'w', encoding='utf-8') as fout:
+    tmpfname = join(path,"temp_source.tmp")
+    with open(tmpfname,'w', encoding='utf-8') as fout:
         fout.write(str(soup))
         
-    with open("temp_source.tmp",'r', encoding='utf-8') as fin:
+    with open(tmpfname,'r', encoding='utf-8') as fin:
         tmp_soup = BeautifulSoup(fin.read(), 'html.parser')
     
     if delete_when_done:
-        os.remove("temp_source.tmp")
+        os.remove(tmpfname)
         
     curr_hash = get_hash(tmp_soup)
     
